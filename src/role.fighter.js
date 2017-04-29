@@ -1,6 +1,6 @@
 'use strict';
 
-const defs = require('defs')
+const defs = require('src/defs');
 
 let roleFighter = {
     run: function(creep) {
