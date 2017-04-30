@@ -6,23 +6,25 @@ const TowerRepairTask = require('Task.TowerRepair');
 const TowerAttackTask = require('Task.TowerAttack');
 
 class TaskFactory {
-    constructor() {}
+    constructor() {
+    }
 
     static createTask(memoryInfo, actor) {
-        switch (memoryInfo.taskType) {
-            case defs.TASKS.ATTACK:
-                if( actor instanceof StructureTower )
-                    return new TowerAttackTask(memoryInfo.taskType, memoryInfo.targetId, memoryInfo.status, memoryInfo.prio);
-                break;
-            case defs.TASKS.REPAIR:
-                if( actor instanceof StructureTower )
-                    return new TowerRepairTask(memoryInfo.taskType, memoryInfo.targetId, memoryInfo.status, memoryInfo.prio);
-                else if( actor instanceof Creep ) {
-                    // return new CreepRepairTask(
-                }
-                break;
-            default:
-                throw new TypeError("Unsupported Task type");
+        switch( memoryInfo.taskType ) {
+        case defs.TASKS.ATTACK:
+            if( actor instanceof StructureTower ) {
+                return new TowerAttackTask(memoryInfo.taskType, memoryInfo.targetId, memoryInfo.status, memoryInfo.prio);
+            }
+            break;
+        case defs.TASKS.REPAIR:
+            if( actor instanceof StructureTower ) {
+                return new TowerRepairTask(memoryInfo.taskType, memoryInfo.targetId, memoryInfo.status, memoryInfo.prio);
+            } else if( actor instanceof Creep ) {
+                // return new CreepRepairTask(
+            }
+            break;
+        default:
+            throw new TypeError('Unsupported Task type');
         }
     }
 }

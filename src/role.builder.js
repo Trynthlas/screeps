@@ -5,19 +5,19 @@ let roleBuilder = {
     /** @param creep Creep **/
     run: function(creep) {
 
-        if(creep.memory.building && creep.carry.energy === 0) {
+        if( creep.memory.building && creep.carry.energy === 0 ) {
             creep.memory.building = false;
             creep.say('🔄 harvest');
-        } else if(!creep.memory.building && creep.carry.energy === creep.carryCapacity) {
+        } else if( !creep.memory.building && creep.carry.energy === creep.carryCapacity ) {
             creep.memory.building = true;
             creep.say('🚧 build');
         }
 
-        if(creep.memory.building) {
+        if( creep.memory.building ) {
             let targets = creep.room.find(FIND_CONSTRUCTION_SITES);
-            if(targets.length) {
+            if( targets.length ) {
                 let t = creep.pos.findClosestByRange(targets);
-                if(creep.build(t) === ERR_NOT_IN_RANGE) {
+                if( creep.build(t) === ERR_NOT_IN_RANGE ) {
                     creep.moveTo(t, {visualizePathStyle: {stroke: '#ffffff'}});
                 }
             } else {
@@ -26,17 +26,17 @@ let roleBuilder = {
                         let sType = structure.structureType;
 
                         if( structure instanceof OwnedStructure && !structure.my ) {
-                            console.log("Not my structure: " + sType + " " + structure.id + " " + structure.my);
+                            console.log('Not my structure: ' + sType + ' ' + structure.id + ' ' + structure.my);
                             return false;
                         }
 
-                        switch (sType) {
-                            case STRUCTURE_WALL:
-                                return structure.hits < defs.WALL_BUILD_MAX;
-                            case STRUCTURE_RAMPART:
-                                return structure.hits < defs.WALL_BUILD_FIX;
-                            default:
-                                return structure.hits < structure.hitsMax / 2;
+                        switch( sType ) {
+                        case STRUCTURE_WALL:
+                            return structure.hits < defs.WALL_BUILD_MAX;
+                        case STRUCTURE_RAMPART:
+                            return structure.hits < defs.WALL_BUILD_FIX;
+                        default:
+                            return structure.hits < structure.hitsMax / 2;
                         }
                     }
                 });
@@ -60,11 +60,11 @@ let roleBuilder = {
 
                 let ec = creep.withdraw(container, RESOURCE_ENERGY);
 
-                if( ec === ERR_NOT_IN_RANGE) {
+                if( ec === ERR_NOT_IN_RANGE ) {
                     creep.moveTo(container, {visualizePathStyle: {stroke: '#ffaa00'}});
                 } else if( ec === ERR_NOT_ENOUGH_RESOURCES ) {
                     creep.memory.shouldHarvest = true;
-                } 
+                }
             } else {
                 creep.memory.shouldHarvest = true;
             }
@@ -76,7 +76,7 @@ let roleBuilder = {
                         return s.energy > 500;
                     }
                 });
-                if(creep.harvest(closestSource) === ERR_NOT_IN_RANGE) {
+                if( creep.harvest(closestSource) === ERR_NOT_IN_RANGE ) {
                     creep.moveTo(closestSource, {visualizePathStyle: {stroke: '#ffaa00'}});
                 }
             }

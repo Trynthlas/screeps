@@ -17,31 +17,28 @@ class Task {
         return {
             'taskType': taskType || this.taskType,
             'targetId': targetId || this.targetId,
-            'status': status !== undefined ? status : this.status,
-            'prio': prio !== undefined ? prio : this.prio
-        }
+            'status':   status !== undefined ? status : this.status,
+            'prio':     prio !== undefined ? prio : this.prio
+        };
     }
 
     static get comparator() {
-        return function (a, b) {
+        return function(a, b) {
             return a.prio - b.prio;
-        }
+        };
     }
 
     static get STATUS() {
-        return Object.freeze({
-            TODO: 0,
-            DONE: 1
-        });
+        return Object.freeze({TODO: 0, DONE: 1});
     }
 
     static get PRIORITY() {
         return Object.freeze({
             IMMEDIATE: 1,
-            URGENT: 2,
-            HIGH: 3,
-            NORMAL: 4,
-            LOW: 5
+            URGENT:    2,
+            HIGH:      3,
+            NORMAL:    4,
+            LOW:       5
         });
     }
 

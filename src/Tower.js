@@ -1,9 +1,9 @@
 'use strict';
 
-const defs = require('defs'),
-    Task = require('Task'),
-    TaskFactory = require('TaskFactory'),
-    profiler = require('screeps-profiler');
+const defs        = require('defs'),
+      Task        = require('Task'),
+      TaskFactory = require('TaskFactory'),
+      profiler    = require('screeps-profiler');
 
 class Tower {
     constructor(theTower) {
@@ -24,29 +24,30 @@ class Tower {
     static get expectedClass() {
         return StructureTower;
     }
-    
+
     doNextTask() {
         // If we're out of tasks, or the room has a new, higher-priority task, update our task list
         if( this.tasks.length === 0 || this.tasks[0].prio > this.me.room.memory.taskList[0].prio ) {
             this.getNewTasksFromRoom();
-        }  else {
+        } else {
             console.log('Tower: not getting new room tasks');
         }
-        
+
         while( this.tasks.length ) {
             let task = TaskFactory.createTask(this.tasks[0], this.me);
 
-            console.log("Tower: looking at task",JSON.stringify(this.tasks[0]),'of',this.tasks.length);
+            console.log('Tower: looking at task', JSON.stringify(this.tasks[0]), 'of', this.tasks.length);
 
             if( task.isComplete() ) {
                 this.finishTask(task);
             } else {
                 this.tasks[0].status = task.execute(this.me);
-                return;
+                break;
             }
         }
 
         this.me.memory.tasks = this.tasks;
+        // console.log('Tower # tasks in memory:',this.me.memory.tasks.length);
     }
 
     /**
@@ -65,14 +66,14 @@ class Tower {
         }
 
         this.tasks.shift();
-        console.log("Tower: tasks remaining:",JSON.stringify(this.tasks));
+        console.log('Tower: tasks remaining:', this.tasks.length);
     }
-    
+
     getNewTasksFromRoom() {
         let roomTasks = this.me.room.memory.taskList.filter(task => {
-            return  task.taskType === defs.TASKS.ATTACK && Game.getObjectById(task.targetId) instanceof Creep ||
-                    task.taskType === defs.TASKS.REPAIR &&
-                    !_.includes(this.tasks, task);
+            return task.taskType === defs.TASKS.ATTACK && Game.getObjectById(task.targetId) instanceof Creep ||
+                   task.taskType === defs.TASKS.REPAIR &&
+                   !_.includes(this.tasks, task);
         });
 
         if( roomTasks.length ) {
@@ -84,7 +85,6 @@ class Tower {
             // Sort the task list and set it in memory
             this.tasks = _.sortBy(this.tasks, [Task.comparator]);
             this.me.memory.tasks = this.tasks;
-            console.log('Tower: memory tasks', this.me.memory.tasks.length);
         }
     }
 }
