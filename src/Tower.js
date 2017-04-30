@@ -26,8 +26,8 @@ class Tower {
     }
 
     doNextTask() {
-        // If we're out of tasks, or the room has a new, higher-priority task, update our task list
-        if( this.tasks.length === 0 || this.tasks[0].prio > this.me.room.memory.taskList[0].prio ) {
+        // If we're out of tasks, or the room has a new, higher-priority (lower prio value) task, update our task list
+        if( !this.tasks.length || (this.tasks.length && this.tasks[0].prio > this.me.room.memory.taskList[0].prio) ) {
             this.getNewTasksFromRoom();
         } else {
             //console.log('Tower: not getting new room tasks');
@@ -73,17 +73,17 @@ class Tower {
         let roomTasks = this.me.room.memory.taskList.filter(task => {
             return task.taskType === defs.TASKS.ATTACK && Game.getObjectById(task.targetId) instanceof Creep ||
                    task.taskType === defs.TASKS.REPAIR &&
-                   !_.includes(this.tasks, task);
+                   !_.some(this.tasks, task);
         });
 
         if( roomTasks.length ) {
             // Combine new tasks with any existing
             console.log('Tower: found valid tasks from room', JSON.stringify(roomTasks));
-            this.tasks = this.tasks.concat(this.tasks, roomTasks);
+            this.tasks = this.tasks.concat(roomTasks);
             console.log('Tower: merged room tasks', this.tasks.length);
 
             // Sort the task list and set it in memory
-            this.tasks = _.sortBy(this.tasks, [Task.comparator]);
+            this.tasks = _.sortBy(this.tasks, 'prio');
             this.me.memory.tasks = this.tasks;
         }
     }

@@ -64,68 +64,92 @@ class RoomManager {
         return OK;
     }
 
-    addToTaskList(t) {
-        if( !_.includes(this.taskList, t) ) {
-            this.taskList.push(t);
-        }
-    }
-
     pruneTasks() {
         this.taskList = _.filter(this.taskList, 'status', Task.STATUS.TODO);
     }
 
     updateTasks() {
-        this.pruneTasks();
-        this.findHostiles();
+        let foundNewTasks;
 
-        if( !this.taskList.find(t => {
+        this.pruneTasks();
+        foundNewTasks = this.findHostiles();
+
+        if( Game.time % defs.ROOM_UPDATE_REPAIR_RATE === 0 || !this.taskList.find(t => {
                 return t.taskType === defs.TASKS.REPAIR;
             }) ) {
-            this.findRepairTasks();
+            foundNewTasks = this.findRepairTasks();
         }
 
-        // Write to memory
-        this.me.memory.taskList = _.sortBy(this.taskList, [Task.comparator]);
+        // Write to memory. Avoid if there's nothing new.
+        if( foundNewTasks ) {
+            this.me.memory.taskList = this.taskList = _.sortBy(this.taskList, 'prio');
+        }
     }
 
+    /**
+     * Updates various parts of the room in memory.
+     * Do expensive operations here. Also for things that don't need to run often, like updating structure refs
+     */
     updateRoom() {
         this.updateTowers();
+
+        // purge tasks
+        this.taskList = [];
     }
 
+    /**
+     * Scans the room for our towers and stores them in the room's memory.
+     */
     updateTowers() {
         let towers = this.me.find(FIND_MY_STRUCTURES, {
             filter: (s) => {
                 return s.structureType === STRUCTURE_TOWER;
             }
         });
+
         this.towers.length = 0;
+
         for( const t of towers ) {
             this.towers.push(t.id);
         }
     }
 
-    findHostiles() {
-        let hostiles = this.me.find(FIND_HOSTILE_CREEPS);
-        if( !hostiles.length ) {
-            return;
+    addToTaskList(t) {
+        let foundNewTasks = false;
+        if( !_.some(this.taskList, t) ) {
+            console.log('Adding task', JSON.stringify(t, 1), 'to taskList', JSON.stringify(this.taskList, 1));
+            this.taskList.push(t);
+            foundNewTasks = true;
         }
 
-        // First partition = hostile fighters
-        // Second partition = other hostiles
-        let enemies = _.partition(hostiles, (c) => {
-            console.log('Looking at hostile creep', JSON.stringify(c));
-            return c.getActiveBodyparts(ATTACK) || c.getActiveBodyparts(RANGED_ATTACK) || c.getActiveBodyparts(HEAL);
-        });
+        return foundNewTasks;
+    }
 
-        console.log('Enemy fighters:', enemies[0].length);
-        console.log('Other enemy creeps:', enemies[1].length);
+    findHostiles() {
+        let foundNewTasks = false,
+            hostiles      = this.me.find(FIND_HOSTILE_CREEPS);
 
-        enemies[0].forEach(enemy => {
-            this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
-        });
-        enemies[1].forEach(enemy => {
-            this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.URGENT));
-        });
+        if( hostiles.length ) {
+            // First partition = hostile fighters
+            // Second partition = other hostiles
+            let enemies = _.partition(hostiles, (c) => {
+                console.log('Looking at hostile creep', JSON.stringify(c));
+                return c.getActiveBodyparts(ATTACK) || c.getActiveBodyparts(RANGED_ATTACK) || c.getActiveBodyparts(HEAL);
+            });
+
+            console.log('Enemy fighters:', enemies[0].length);
+            console.log('Other enemy creeps:', enemies[1].length);
+
+            enemies[0].forEach(enemy => {
+                foundNewTasks = foundNewTasks ||
+                                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
+            });
+            enemies[1].forEach(enemy => {
+                foundNewTasks = foundNewTasks || this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.URGENT));
+            });
+        }
+
+        return foundNewTasks;
     }
 
     findRepairTasks() {
@@ -153,6 +177,7 @@ class RoomManager {
         });
 
         // Create tasks with priority and place them task list
+        let foundNewTasks = false;
         repairTargets.forEach(target => {
             let prio;
             switch( target.structureType ) {
@@ -171,8 +196,10 @@ class RoomManager {
 
             let newTask = Task.toMemoryObject(defs.TASKS.REPAIR, target.id, Task.STATUS.TODO, prio);
             console.log('For target', target.structureType, ', adding new Task to memory:', JSON.stringify(newTask));
-            this.addToTaskList(newTask);
+            foundNewTasks = foundNewTasks || this.addToTaskList(newTask);
         });
+
+        return foundNewTasks;
     }
 
 }

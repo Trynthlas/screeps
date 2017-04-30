@@ -1,15 +1,9 @@
-/*
- * Module code goes here. Use 'module.exports' to export things:
- * module.exports.thing = 'a thing';
- *
- * You can import it from another modules like this:
- * var mod = require('defs');
- * mod.thing == 'a thing'; // true
- */
+'use strict';
 
 module.exports = {
 
-    ROOM_UPDATE_RATE: 1,
+    ROOM_UPDATE_RATE:        100,
+    ROOM_UPDATE_REPAIR_RATE: 25,
 
     WALL_BUILD_MAX: 150000,
     WALL_BUILD_FIX: 102000,

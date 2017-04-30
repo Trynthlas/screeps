@@ -38,7 +38,7 @@ module.exports.loop = function() {
                 {role: 'upgrader'});
             console.log('Spawning new upgrader: ' + newName);
         }
-        if( builders.length < 3 ) {
+        if( builders.length < 2 ) {
             let newName = Game.spawns['Spawn1'].createCreep([WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], undefined, {role: 'builder'});
             console.log('Spawning new builder: ' + newName);
         }
