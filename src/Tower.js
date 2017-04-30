@@ -30,7 +30,7 @@ class Tower {
         if( this.tasks.length === 0 || this.tasks[0].prio > this.me.room.memory.taskList[0].prio ) {
             this.getNewTasksFromRoom();
         } else {
-            console.log('Tower: not getting new room tasks');
+            //console.log('Tower: not getting new room tasks');
         }
 
         while( this.tasks.length ) {

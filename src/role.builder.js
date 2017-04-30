@@ -1,3 +1,5 @@
+'use strict';
+
 const defs = require('defs');
 
 let roleBuilder = {
@@ -47,12 +49,7 @@ let roleBuilder = {
             }
         }
         else {
-            let container = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                filter: (s) => {
-                    let sType = s.structureType;
-                    return (sType === STRUCTURE_CONTAINER || sType === STRUCTURE_STORAGE) && s.store[RESOURCE_ENERGY] > 0;
-                }
-            });
+            let container = this.getWithdrawContainer(creep);
 
             if( container ) {
                 // console.log(creep.name + " found container with " + container.store[RESOURCE_ENERGY] + " energy");
@@ -81,6 +78,24 @@ let roleBuilder = {
                 }
             }
         }
+    },
+
+    /**
+     * Finds the best object to pull energy from. Prefer STORAGE to CONTAINER.
+     * @param creep Creep
+     */
+    getWithdrawContainer: function(creep) {
+        if( _.isUndefined(creep.room.storage) ) {
+            return creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                filter: (s) => {
+                    return s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] > creep.carryCapacity;
+                }
+            });
+        } else if( creep.room.storage.store[RESOURCE_ENERGY] > creep.carryCapacity ) {
+            return creep.room.storage;
+        }
+
+        return null;
     }
 };
 
