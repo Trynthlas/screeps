@@ -15,6 +15,9 @@ class RoomManager {
 
         this.me = room;
 
+        if( _.isUndefined(this.me.memory.info) ) {
+            this.me.memory.info = RoomManager.getRoomInfo(this.me);
+        }
         if( _.isUndefined(this.me.memory.taskList) ) {
             this.me.memory.taskList = [];
         }
@@ -23,7 +26,6 @@ class RoomManager {
         }
 
         this.towers = this.me.memory.towers;
-
         this.taskList = _.clone(this.me.memory.taskList);
     }
 
@@ -145,8 +147,7 @@ class RoomManager {
             console.log('Other enemy creeps:', enemies[1].length);
 
             enemies[0].forEach(enemy => {
-                foundNewTasks = foundNewTasks ||
-                                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
+                foundNewTasks = foundNewTasks || this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
             });
             enemies[1].forEach(enemy => {
                 foundNewTasks = foundNewTasks || this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.URGENT));
@@ -206,6 +207,29 @@ class RoomManager {
         return foundNewTasks;
     }
 
+    static getRoomInfo(room) {
+        let info = {},
+            sources = room.find(FIND_SOURCES),
+            minerals = room.find(FIND_MINERALS);
+
+        if( sources.length ) {
+            info.sources = {};
+            for(const s of sources) {
+                info.sources[s.id] = {x: s.pos.x, y: s.pos.y};
+            }
+        }
+
+        if( minerals.length ) {
+            info.minerals = {};
+            for(const m of minerals) {
+                info.minerals[m.id] = {x: m.pos.x, y: m.pos.y};
+            }
+        }
+
+        info.exits = Game.map.describeExits(room.name);
+
+        return info;
+    }
 }
 
 module.exports = RoomManager;
