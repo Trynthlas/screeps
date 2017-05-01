@@ -65,7 +65,11 @@ class RoomManager {
     }
 
     pruneTasks() {
+        let len = this.taskList.length;
         this.taskList = _.filter(this.taskList, 'status', Task.STATUS.TODO);
+        if( this.taskList.length !== len ) {
+            this.me.memory.taskList = this.taskList;
+        }
     }
 
     updateTasks() {

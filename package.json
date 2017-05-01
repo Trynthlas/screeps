@@ -1,9 +1,15 @@
 {
-  "name": "screeps-trynthlas",
-  "version": "0.0.1",
-  "description": "screeps.com scripts by Trynthlas",
-  "devDependencies": {
-    "grunt": "~1.0.1",
-    "grunt-screeps": "~1.2.1"
-  }
+    "name": "screeps-trynthlas",
+    "version": "0.0.1",
+    "description": "screeps.com scripts by Trynthlas",
+    "license": "Unlicense",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Trynthlas/screeps.git"
+    },
+    "devDependencies": {
+        "grunt": "~1.0.1",
+        "grunt-screeps": "~1.2.1",
+        "lodash": "^4.17"
+    }
 }
