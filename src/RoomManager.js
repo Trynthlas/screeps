@@ -5,6 +5,31 @@ const defs  = require('defs'),
       Tower = require('Tower');
 
 /**
+ * Room Memory: {
+ *      info: {
+ *          sources: {
+ *              <sourceId>: {RoomPosition}
+ *          },
+ *          minerals: {
+ *              <mineralId>: {RoomPosition}
+ *          },
+ *          exits: {
+ *              <1|3|5|7>: <roomName>
+ *          }
+ *      },
+ *      mineContainers: {
+ *          <sourceId>: {
+ *              container: <containerId>,
+ *              pos: {RoomPosition}
+ *          }
+ *      },
+ *      towers: [<towerId>,...]
+ *      taskList: [<task>,...],
+ * }
+ *
+ */
+
+/**
  * Manages an individual Room
  */
 class RoomManager {
@@ -17,6 +42,9 @@ class RoomManager {
 
         if( _.isUndefined(this.me.memory.info) ) {
             this.me.memory.info = RoomManager.getRoomInfo(this.me);
+        }
+        if( _.isUndefined(this.me.memory.mineContainers) ) {
+            this.me.memory.mineContainers = {};
         }
         if( _.isUndefined(this.me.memory.taskList) ) {
             this.me.memory.taskList = [];
@@ -83,7 +111,7 @@ class RoomManager {
         if( Game.time % defs.ROOM_UPDATE_REPAIR_RATE === 0 || !this.taskList.find(t => {
                 return t.taskType === defs.TASKS.REPAIR;
             }) ) {
-            foundNewTasks = this.findRepairTasks();
+            foundNewTasks = foundNewTasks || this.findRepairTasks();
         }
 
         // Write to memory. Avoid if there's nothing new.
@@ -123,7 +151,7 @@ class RoomManager {
     addToTaskList(t) {
         let foundNewTasks = false;
         if( !_.some(this.taskList, t) ) {
-            console.log('Adding task', JSON.stringify(t, 1), 'to taskList', JSON.stringify(this.taskList, 1));
+            console.log('Adding task', JSON.stringify(t), 'to taskList');
             this.taskList.push(t);
             foundNewTasks = true;
         }
@@ -147,7 +175,8 @@ class RoomManager {
             console.log('Other enemy creeps:', enemies[1].length);
 
             enemies[0].forEach(enemy => {
-                foundNewTasks = foundNewTasks || this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
+                foundNewTasks = foundNewTasks ||
+                                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
             });
             enemies[1].forEach(enemy => {
                 foundNewTasks = foundNewTasks || this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.URGENT));
@@ -208,27 +237,40 @@ class RoomManager {
     }
 
     static getRoomInfo(room) {
-        let info = {},
-            sources = room.find(FIND_SOURCES),
+        let info     = {},
+            sources  = room.find(FIND_SOURCES),
             minerals = room.find(FIND_MINERALS);
 
         if( sources.length ) {
             info.sources = {};
-            for(const s of sources) {
-                info.sources[s.id] = {x: s.pos.x, y: s.pos.y};
+            for( const s of sources ) {
+                info.sources[s.id] = {x: s.pos.x, y: s.pos.y, name: room.name};
             }
         }
 
         if( minerals.length ) {
             info.minerals = {};
-            for(const m of minerals) {
-                info.minerals[m.id] = {x: m.pos.x, y: m.pos.y};
+            for( const m of minerals ) {
+                info.minerals[m.id] = {x: m.pos.x, y: m.pos.y, name: room.name};
             }
         }
 
         info.exits = Game.map.describeExits(room.name);
 
         return info;
+    }
+
+    static getContainerPositionForSource(sourceId) {
+        if( !_.isUndefined(this.me.memory.mineContainers[sourceId]) ) {
+            return _.create(RoomPosition.prototype, this.me.memory.mineContainers[sourceId].pos);
+        } else {
+            let containers = Game.getObjectById(sourceId).pos.findInRange(FIND_MY_STRUCTURES, 1, {filter: s => s.structureType === STRUCTURE_CONTAINER});
+            if( containers ) {
+                return containers[0].pos;
+            }
+        }
+
+        return undefined;
     }
 }
 

@@ -58,7 +58,7 @@ class Tower {
      */
     finishTask(task) {
         let idx = this.me.room.memory.taskList.findIndex(t => {
-            return task.taskType === t.taskType && task.targetId === t.targetId;
+            return task.taskType === t.taskType && task.targetId === t.targetId && t.prio === task.prio;
         });
         if( idx !== -1 ) {
             this.me.room.memory.taskList[idx].status = Task.STATUS.DONE;
