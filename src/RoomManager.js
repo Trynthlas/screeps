@@ -23,7 +23,8 @@ const defs  = require('defs'),
  *              pos: {RoomPosition}
  *          }
  *      },
- *      towers: [<towerId>,...]
+ *      towers: [<towerId>,...],
+ *      spawns; [<spawnName>,...],
  *      taskList: [<task>,...],
  * }
  *
@@ -52,6 +53,9 @@ class RoomManager {
         if( _.isUndefined(this.me.memory.towers) ) {
             this.me.memory.towers = [];
         }
+        if( _.isUndefined(this.me.memory.spawns) ) {
+            this.me.memory.spawns = [];
+        }
 
         this.towers = this.me.memory.towers;
         this.taskList = _.clone(this.me.memory.taskList);
@@ -61,6 +65,9 @@ class RoomManager {
         return Room;
     }
 
+    /**
+     * The main room execution function. Handles updating information and taskList.
+     */
     runRoom() {
         if( Game.time % defs.ROOM_UPDATE_RATE === 0 ) {
             this.updateRoom();
@@ -69,11 +76,18 @@ class RoomManager {
         this.updateTasks();
 
         if( this.runTowers() !== OK ) {
-            this.updateTowers();
+            this.updateStructures();
             this.runTowers();
         }
     }
 
+    /**
+     * Execute tasks for each tower in the room
+     *
+     * @returns {number}
+     * OK if successful
+     * ERR_INVALID_TARGET if there was a TypeError; usually this indicates the tower is missing
+     */
     runTowers() {
         // console.log('runTowers on',JSON.stringify(this.towers));
         for( const id of this.towers ) {
@@ -94,6 +108,9 @@ class RoomManager {
         return OK;
     }
 
+    /**
+     * Clears out completed tasks
+     */
     pruneTasks() {
         let len = this.taskList.length;
         this.taskList = _.filter(this.taskList, 'status', Task.STATUS.TODO);
@@ -102,6 +119,9 @@ class RoomManager {
         }
     }
 
+    /**
+     * Find all the things to do and update the taskList
+     */
     updateTasks() {
         let foundNewTasks;
 
@@ -125,29 +145,40 @@ class RoomManager {
      * Do expensive operations here. Also for things that don't need to run often, like updating structure refs
      */
     updateRoom() {
-        this.updateTowers();
+        this.updateStructures();
 
         // purge tasks
         this.taskList = [];
     }
 
     /**
-     * Scans the room for our towers and stores them in the room's memory.
+     * Scans the room for our structures (that can do things) and stores them in the room's memory.
      */
-    updateTowers() {
-        let towers = this.me.find(FIND_MY_STRUCTURES, {
+    updateStructures() {
+        let structures = this.me.find(FIND_MY_STRUCTURES, {
             filter: (s) => {
-                return s.structureType === STRUCTURE_TOWER;
+                return s.structureType === STRUCTURE_TOWER || s.structureType === STRUCTURE_SPAWN;
             }
         });
 
         this.towers.length = 0;
 
-        for( const t of towers ) {
-            this.towers.push(t.id);
+        for( const s of structures ) {
+            switch(s.structureType) {
+            case STRUCTURE_TOWER:
+                this.towers.push(s.id); break;
+            case STRUCTURE_SPAWN:
+                this.spawns.push(s.name); break;
+            }
         }
     }
 
+    /**
+     * Adds a task to the taskList if it is not already present
+     *
+     * @param t the task to add
+     * @returns {boolean} true if the task was added to the taskList
+     */
     addToTaskList(t) {
         let foundNewTasks = false;
         if( !_.some(this.taskList, t) ) {
@@ -159,6 +190,11 @@ class RoomManager {
         return foundNewTasks;
     }
 
+    /**
+     * Finds hostile creeps and assigns ATTACK tasks for them
+     *
+     * @returns {boolean} true if new tasks were added to the taskList for any hostile creeps
+     */
     findHostiles() {
         let foundNewTasks = false,
             hostiles      = this.me.find(FIND_HOSTILE_CREEPS);
@@ -167,7 +203,7 @@ class RoomManager {
             // First partition = hostile fighters
             // Second partition = other hostiles
             let enemies = _.partition(hostiles, (c) => {
-                console.log('Looking at hostile creep', JSON.stringify(c));
+                console.log('Looking at hostile creep: attack=',c.getActiveBodyparts(ATTACK),'ranged=',c.getActiveBodyparts(RANGED_ATTACK),'heal=',c.getActiveBodyparts(HEAL));
                 return c.getActiveBodyparts(ATTACK) || c.getActiveBodyparts(RANGED_ATTACK) || c.getActiveBodyparts(HEAL);
             });
 
@@ -186,6 +222,11 @@ class RoomManager {
         return foundNewTasks;
     }
 
+    /**
+     * Finds structures that need repair and creates tasks for doing so
+     *
+     * @returns {boolean} true if new tasks were added to the taskList for repairs
+     */
     findRepairTasks() {
         let repairTargets = this.me.find(FIND_STRUCTURES, {
             filter: (s) => {
