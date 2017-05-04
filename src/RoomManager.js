@@ -5,7 +5,7 @@ const defs  = require('defs'),
       Tower = require('Tower');
 
 /**
- * Room Memory: {
+ * Memory.rooms[room]: {
  *      info: {
  *          sources: {
  *              <sourceId>: {RoomPosition}
@@ -17,7 +17,7 @@ const defs  = require('defs'),
  *              <1|3|5|7>: <roomName>
  *          }
  *      },
- *      mineContainers: {
+ *      sourceContainers: {
  *          <sourceId>: {
  *              container: <containerId>,
  *              pos: {RoomPosition}
@@ -44,8 +44,8 @@ class RoomManager {
         if( _.isUndefined(this.me.memory.info) ) {
             this.me.memory.info = RoomManager.getRoomInfo(this.me);
         }
-        if( _.isUndefined(this.me.memory.mineContainers) ) {
-            this.me.memory.mineContainers = {};
+        if( _.isUndefined(this.me.memory.sourceContainers) ) {
+            this.me.memory.sourceContainers = {};
         }
         if( _.isUndefined(this.me.memory.taskList) ) {
             this.me.memory.taskList = [];
@@ -56,9 +56,6 @@ class RoomManager {
         if( _.isUndefined(this.me.memory.spawns) ) {
             this.me.memory.spawns = [];
         }
-
-        this.towers = this.me.memory.towers;
-        this.taskList = _.clone(this.me.memory.taskList);
     }
 
     static get expectedClass() {
@@ -85,12 +82,12 @@ class RoomManager {
      * Execute tasks for each tower in the room
      *
      * @returns {number}
-     * OK if successful
-     * ERR_INVALID_TARGET if there was a TypeError; usually this indicates the tower is missing
+     *  OK if successful
+     *  ERR_INVALID_TARGET if there was a TypeError; usually this indicates the tower is missing
      */
     runTowers() {
-        // console.log('runTowers on',JSON.stringify(this.towers));
-        for( const id of this.towers ) {
+        // console.log('runTowers on',JSON.stringify(this.me.memory.towers));
+        for( const id of this.me.memory.towers ) {
             let tower;
             try {
                 tower = new Tower(Game.getObjectById(id));
@@ -112,31 +109,29 @@ class RoomManager {
      * Clears out completed tasks
      */
     pruneTasks() {
-        let len = this.taskList.length;
-        this.taskList = _.filter(this.taskList, 'status', Task.STATUS.TODO);
-        if( this.taskList.length !== len ) {
-            this.me.memory.taskList = this.taskList;
-        }
+        this.me.memory.taskList = _.filter(this.me.memory.taskList, 'status', Task.STATUS.TODO);
     }
 
     /**
      * Find all the things to do and update the taskList
      */
     updateTasks() {
-        let foundNewTasks;
+        let listLen;
 
         this.pruneTasks();
-        foundNewTasks = this.findHostiles();
+        listLen = this.me.memory.taskList.length;
 
-        if( Game.time % defs.ROOM_UPDATE_REPAIR_RATE === 0 || !this.taskList.find(t => {
+        this.findHostiles();
+
+        if( Game.time % defs.ROOM_UPDATE_REPAIR_RATE === 0 || !this.me.memory.taskList.find(t => {
                 return t.taskType === defs.TASKS.REPAIR;
             }) ) {
-            foundNewTasks = foundNewTasks || this.findRepairTasks();
+            this.findRepairTasks();
         }
 
-        // Write to memory. Avoid if there's nothing new.
-        if( foundNewTasks ) {
-            this.me.memory.taskList = this.taskList = _.sortBy(this.taskList, 'prio');
+        // Only sort if there are new tasks
+        if( listLen !== this.me.memory.taskList.length ) {
+            this.me.memory.taskList = _.sortBy(this.me.memory.taskList, 'prio');
         }
     }
 
@@ -148,7 +143,7 @@ class RoomManager {
         this.updateStructures();
 
         // purge tasks
-        this.taskList = [];
+        this.me.memory.taskList = [];
     }
 
     /**
@@ -161,14 +156,17 @@ class RoomManager {
             }
         });
 
-        this.towers.length = 0;
+        this.me.memory.towers.length = 0;
+        this.me.memory.spawns.length = 0;
 
         for( const s of structures ) {
-            switch(s.structureType) {
+            switch( s.structureType ) {
             case STRUCTURE_TOWER:
-                this.towers.push(s.id); break;
+                this.me.memory.towers.push(s.id);
+                break;
             case STRUCTURE_SPAWN:
-                this.spawns.push(s.name); break;
+                this.me.memory.spawns.push(s.name);
+                break;
             }
         }
     }
@@ -180,30 +178,27 @@ class RoomManager {
      * @returns {boolean} true if the task was added to the taskList
      */
     addToTaskList(t) {
-        let foundNewTasks = false;
-        if( !_.some(this.taskList, t) ) {
+        if( !_.some(this.me.memory.taskList, t) ) {
             console.log('Adding task', JSON.stringify(t), 'to taskList');
-            this.taskList.push(t);
-            foundNewTasks = true;
+            this.me.memory.taskList.push(t);
+            return true;
         }
 
-        return foundNewTasks;
+        return false;
     }
 
     /**
      * Finds hostile creeps and assigns ATTACK tasks for them
-     *
-     * @returns {boolean} true if new tasks were added to the taskList for any hostile creeps
      */
     findHostiles() {
-        let foundNewTasks = false,
-            hostiles      = this.me.find(FIND_HOSTILE_CREEPS);
+        let hostiles = this.me.find(FIND_HOSTILE_CREEPS);
 
         if( hostiles.length ) {
             // First partition = hostile fighters
             // Second partition = other hostiles
             let enemies = _.partition(hostiles, (c) => {
-                console.log('Looking at hostile creep: attack=',c.getActiveBodyparts(ATTACK),'ranged=',c.getActiveBodyparts(RANGED_ATTACK),'heal=',c.getActiveBodyparts(HEAL));
+                console.log('Looking at hostile creep: attack=', c.getActiveBodyparts(ATTACK), 'ranged=', c.getActiveBodyparts(RANGED_ATTACK), 'heal=',
+                    c.getActiveBodyparts(HEAL));
                 return c.getActiveBodyparts(ATTACK) || c.getActiveBodyparts(RANGED_ATTACK) || c.getActiveBodyparts(HEAL);
             });
 
@@ -211,21 +206,16 @@ class RoomManager {
             console.log('Other enemy creeps:', enemies[1].length);
 
             enemies[0].forEach(enemy => {
-                foundNewTasks = foundNewTasks ||
-                                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
+                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
             });
             enemies[1].forEach(enemy => {
-                foundNewTasks = foundNewTasks || this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.URGENT));
+                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.URGENT));
             });
         }
-
-        return foundNewTasks;
     }
 
     /**
      * Finds structures that need repair and creates tasks for doing so
-     *
-     * @returns {boolean} true if new tasks were added to the taskList for repairs
      */
     findRepairTasks() {
         let repairTargets = this.me.find(FIND_STRUCTURES, {
@@ -252,7 +242,6 @@ class RoomManager {
         });
 
         // Create tasks with priority and place them task list
-        let foundNewTasks = false;
         repairTargets.forEach(target => {
             let prio;
             switch( target.structureType ) {
@@ -271,10 +260,8 @@ class RoomManager {
 
             let newTask = Task.toMemoryObject(defs.TASKS.REPAIR, target.id, Task.STATUS.TODO, prio);
             console.log('For target', target.structureType, ', adding new Task to memory:', JSON.stringify(newTask));
-            foundNewTasks = foundNewTasks || this.addToTaskList(newTask);
+            this.addToTaskList(newTask);
         });
-
-        return foundNewTasks;
     }
 
     static getRoomInfo(room) {
@@ -301,13 +288,26 @@ class RoomManager {
         return info;
     }
 
+    /**
+     * Gets a RoomPosition of a container directly adjacent to a source.
+     * First checks the room memory for a record, and if not present places the results of a successful search into room memory.
+     *
+     * @param sourceId the id of the Source around which to look
+     * @returns {RoomPosition|undefined} the RoomPosition of the container, or undefined if one is not found
+     */
     static getContainerPositionForSource(sourceId) {
-        if( !_.isUndefined(this.me.memory.mineContainers[sourceId]) ) {
-            return _.create(RoomPosition.prototype, this.me.memory.mineContainers[sourceId].pos);
+        if( !_.isUndefined(this.me.memory.sourceContainers[sourceId]) ) {
+            return _.create(RoomPosition.prototype, this.me.memory.sourceContainers[sourceId].pos);
         } else {
             let containers = Game.getObjectById(sourceId).pos.findInRange(FIND_MY_STRUCTURES, 1, {filter: s => s.structureType === STRUCTURE_CONTAINER});
-            if( containers ) {
-                return containers[0].pos;
+            if( containers.length ) {
+                let c = containers[0];
+                this.me.memory.sourceContainers[sourceId] = {
+                    container: c.id,
+                    pos:       {x: c.pos.x, y: c.pos.y, roomName: c.room.name}
+                };
+
+                return c.pos;
             }
         }
 

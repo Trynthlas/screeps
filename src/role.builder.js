@@ -85,7 +85,7 @@ let roleBuilder = {
      * @param creep Creep
      */
     getWithdrawContainer: function(creep) {
-        if( _.isUndefined(creep.room.storage) ) {
+        if( _.isUndefined(creep.room.storage) || creep.room.storage.store[RESOURCE_ENERGY] < creep.carryCapacity ) {
             return creep.pos.findClosestByRange(FIND_STRUCTURES, {
                 filter: (s) => {
                     return s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] > creep.carryCapacity;

@@ -5,8 +5,8 @@ module.exports = {
     ROOM_UPDATE_RATE:        100,
     ROOM_UPDATE_REPAIR_RATE: 25,
 
-    WALL_BUILD_MAX: 150000,
-    WALL_BUILD_FIX: 102000,
+    WALL_BUILD_MAX: 200000,
+    WALL_BUILD_FIX: 150000,
 
     DIRECTIONS: {
         NORTH:     {x: 0, y: -1},

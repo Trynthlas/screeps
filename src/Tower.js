@@ -71,8 +71,9 @@ class Tower {
 
     getNewTasksFromRoom() {
         let roomTasks = this.me.room.memory.taskList.filter(task => {
-            return task.taskType === defs.TASKS.ATTACK && Game.getObjectById(task.targetId) instanceof Creep ||
-                   task.taskType === defs.TASKS.REPAIR &&
+            let target = Game.getObjectById(task.targetId);
+            return (task.taskType === defs.TASKS.ATTACK && target instanceof Creep) ||
+                   (task.taskType === defs.TASKS.REPAIR && target.structureType !== STRUCTURE_WALL) &&
                    !_.some(this.tasks, task);
         });
 
