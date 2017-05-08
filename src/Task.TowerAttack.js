@@ -26,7 +26,7 @@ class TowerAttack extends Task {
         if( actor.energy >= 10 ) {
             let ec;
             if( (ec = actor.attack(this.target)) !== OK ) {
-                Game.notify('Tower ' + actor.id + ' failed to attack target ' + this.target.id + '. EC=' + ec, 1);
+                Game.notify(`Tower ${actor.id} failed to attack target ${this.target.id}. EC=${ec}`);
             }
         } else {
             // console.log("Tower",actor.id,"has insufficient energy to do task");

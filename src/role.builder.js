@@ -36,7 +36,7 @@ let roleBuilder = {
                         case STRUCTURE_WALL:
                             return structure.hits < defs.WALL_BUILD_MAX;
                         case STRUCTURE_RAMPART:
-                            return structure.hits < defs.WALL_BUILD_FIX;
+                            return structure.hits < defs.WALL_BUILD_MAX;
                         default:
                             return structure.hits < structure.hitsMax / 2;
                         }
