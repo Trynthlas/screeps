@@ -20,7 +20,7 @@ class TowerRepair extends Task {
         switch( this.target.structureType ) {
         case STRUCTURE_RAMPART:
         case STRUCTURE_WALL:
-            return this.target.hits >= defs.WALL_BUILD_MAX;
+            return this.target.hits >= WALL_BUILD_MAX;
         case STRUCTURE_ROAD:
             return this.target.hits >= this.target.hitsMax * 0.75;
         default:

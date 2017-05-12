@@ -17,8 +17,10 @@ profiler.enable();
 
 module.exports.loop = function() {
     profiler.wrap(function() {
-        memory.init();
-        memory.free();
+
+        if( Game.time % MEMORY_CLEANUP_INTERVAL === 0 ) {
+            memory.free();
+        }
 
         let harvesters = _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester');
         let porters = _.filter(Game.creeps, (creep) => creep.memory.role === 'porter');

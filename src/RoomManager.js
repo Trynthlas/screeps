@@ -66,7 +66,7 @@ class RoomManager {
      * The main room execution function. Handles updating information and taskList.
      */
     runRoom() {
-        if( Game.time % defs.ROOM_UPDATE_RATE === 0 ) {
+        if( Game.time % ROOM_UPDATE_INTERVAL === 0 ) {
             this.updateRoom();
         }
 
@@ -123,7 +123,7 @@ class RoomManager {
 
         this.findHostiles();
 
-        if( Game.time % defs.ROOM_UPDATE_REPAIR_RATE === 0 || !this.me.memory.taskList.find(t => {
+        if( Game.time % ROOM_FIND_REPAIR_INTERVAL === 0 || !this.me.memory.taskList.find(t => {
                 return t.taskType === defs.TASKS.REPAIR;
             }) ) {
             this.findRepairTasks();
