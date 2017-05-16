@@ -21,10 +21,19 @@ class DepositResource extends State {
                 creep.moveTo(container, STD_MOVETO_OPTS);
             }
         } else if( creep.memory.shouldHaul ) {
-            let tgt = roomManagerPool.getManager(creep.room.name).wut();
-            if( creep.transfer(tgt, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE ) {
-                creep.moveTo(tgt, STD_MOVETO_OPTS);
+            let nextToFill = roomManagerPool.getManager(creep.room.name).getTargetContainerForResource(RESOURCE_ENERGY);
+            if( nextToFill ) {
+                if( nextToFill.length > 1 ) {
+                    nextToFill = creep.pos.findClosestByRange(nextToFill);
+                } else {
+                    nextToFill = nextToFill[0];
+                }
+
+                if( creep.transfer(nextToFill, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE ) {
+                    creep.moveTo(nextToFill, STD_MOVETO_OPTS);
+                }
             }
+            // else no target
         } else {
             creep.drop(RESOURCE_ENERGY);
         }

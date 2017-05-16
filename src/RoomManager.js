@@ -6,16 +6,10 @@ const defs  = require('defs'),
 
 /**
  * Memory.rooms[room]: {
- *      info: {
- *          sources: {
- *              <sourceId>: {RoomPosition}
- *          },
- *          minerals: {
- *              <mineralId>: {RoomPosition}
- *          },
- *          exits: {
- *              <1|3|5|7>: <roomName>
- *          }
+ *      sources: [<sourceId>,...],
+ *      minerals: [<mineralId>,...],
+ *      exits: {
+ *          <TOP|RIGHT|BOTTOM|LEFT>: <roomName>
  *      },
  *      sourceContainers: {
  *          <sourceId>: {
@@ -27,8 +21,20 @@ const defs  = require('defs'),
  *      spawns; [<spawnName>,...],
  *      taskList: [<task>,...],
  * }
- *
  */
+
+const RoomStatus = {
+    ROOM_NORMAL: 0,
+    ROOM_HOSTILES: 1,
+    ROOM_PANIC: 2
+};
+
+
+const EnergyStoragePriorityMap = new Map();
+EnergyStoragePriorityMap.set(RoomStatus.ROOM_NORMAL, [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_STORAGE, STRUCTURE_TERMINAL]);
+EnergyStoragePriorityMap.set(RoomStatus.ROOM_HOSTILES, [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_STORAGE, STRUCTURE_TERMINAL]);
+EnergyStoragePriorityMap.set(RoomStatus.ROOM_PANIC, [STRUCTURE_TOWER, STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_STORAGE, STRUCTURE_TERMINAL]);
+
 
 /**
  * Manages an individual Room
@@ -41,20 +47,11 @@ class RoomManager {
 
         this.me = room;
 
-        if( _.isUndefined(this.me.memory.info) ) {
-            this.me.memory.info = RoomManager.getRoomInfo(this.me);
-        }
         if( _.isUndefined(this.me.memory.sourceContainers) ) {
             this.me.memory.sourceContainers = {};
         }
         if( _.isUndefined(this.me.memory.taskList) ) {
             this.me.memory.taskList = [];
-        }
-        if( _.isUndefined(this.me.memory.towers) ) {
-            this.me.memory.towers = [];
-        }
-        if( _.isUndefined(this.me.memory.spawns) ) {
-            this.me.memory.spawns = [];
         }
     }
 
@@ -62,18 +59,30 @@ class RoomManager {
         return Room;
     }
 
+    get roomStatus() {
+        if( !this.me.memory.status ) {
+            this.roomStatus = RoomStatus.ROOM_NORMAL;
+        }
+        return this.me.memory.status;
+    }
+
+    set roomStatus(status) {
+        if( !_.isUndefined(RoomStatus[status]) ) {
+            this.me.memory.status = status;
+        } else {
+            throw new Error('Status code ' + status + ' is not a valid RoomStatus');
+        }
+    }
+
     /**
      * The main room execution function. Handles updating information and taskList.
      */
     runRoom() {
-        if( Game.time % ROOM_UPDATE_INTERVAL === 0 ) {
-            this.updateRoom();
-        }
-
         this.updateTasks();
 
         if( this.runTowers() !== OK ) {
-            this.updateStructures();
+            // Force towers to be re-fetched
+            this.me.towers = undefined;
             this.runTowers();
         }
     }
@@ -87,10 +96,9 @@ class RoomManager {
      */
     runTowers() {
         // console.log('runTowers on',JSON.stringify(this.me.memory.towers));
-        for( const id of this.me.memory.towers ) {
-            let tower;
+        for( const t of this.me.towers ) {
             try {
-                tower = new Tower(Game.getObjectById(id));
+                let tower = new Tower(t);
                 tower.doNextTask();
             } catch( ex ) {
                 if( ex instanceof TypeError ) {
@@ -110,6 +118,10 @@ class RoomManager {
      */
     pruneTasks() {
         this.me.memory.taskList = _.filter(this.me.memory.taskList, 'status', Task.STATUS.TODO);
+    }
+
+    purgeTasks() {
+        this.me.memory.taskList.length = 0;
     }
 
     /**
@@ -132,42 +144,6 @@ class RoomManager {
         // Only sort if there are new tasks
         if( listLen !== this.me.memory.taskList.length ) {
             this.me.memory.taskList = _.sortBy(this.me.memory.taskList, 'prio');
-        }
-    }
-
-    /**
-     * Updates various parts of the room in memory.
-     * Do expensive operations here. Also for things that don't need to run often, like updating structure refs
-     */
-    updateRoom() {
-        this.updateStructures();
-
-        // purge tasks
-        this.me.memory.taskList = [];
-    }
-
-    /**
-     * Scans the room for our structures (that can do things) and stores them in the room's memory.
-     */
-    updateStructures() {
-        let structures = this.me.find(FIND_MY_STRUCTURES, {
-            filter: (s) => {
-                return s.structureType === STRUCTURE_TOWER || s.structureType === STRUCTURE_SPAWN;
-            }
-        });
-
-        this.me.memory.towers.length = 0;
-        this.me.memory.spawns.length = 0;
-
-        for( const s of structures ) {
-            switch( s.structureType ) {
-            case STRUCTURE_TOWER:
-                this.me.memory.towers.push(s.id);
-                break;
-            case STRUCTURE_SPAWN:
-                this.me.memory.spawns.push(s.name);
-                break;
-            }
         }
     }
 
@@ -264,33 +240,45 @@ class RoomManager {
         });
     }
 
-    static getRoomInfo(room) {
-        let info     = {},
-            sources  = room.find(FIND_SOURCES),
-            minerals = room.find(FIND_MINERALS);
+    getTargetContainerForResource(resourceType) {
+        let containers;
+        switch(resourceType) {
+        case RESOURCE_ENERGY:
+            containers = EnergyStoragePriorityMap.get(this.roomStatus);
+            break;
+        default:
+            return this.me.storage ? this.me.storage : undefined;
+        }
 
-        if( sources.length ) {
-            info.sources = {};
-            for( const s of sources ) {
-                info.sources[s.id] = {x: s.pos.x, y: s.pos.y, name: room.name};
+        let toFill;
+        for( const c of containers ) {
+            switch(c) {
+            case STRUCTURE_SPAWN:
+            case STRUCTURE_EXTENSION:
+            case STRUCTURE_TOWER:
+                let structs = this.me.getStructuresByType(c);
+                toFill = _.filter(structs, s => s.energy < s.energyCapacity);
+                if( toFill.length ) {
+                    return toFill;
+                }
+                break;
+            case STRUCTURE_STORAGE:
+            case STRUCTURE_TERMINAL:
+                let s = this.me.getStructuresByType(c);
+                if( s.amount < s.storeCapacity ) {
+                    return [s];
+                }
+                break;
             }
         }
 
-        if( minerals.length ) {
-            info.minerals = {};
-            for( const m of minerals ) {
-                info.minerals[m.id] = {x: m.pos.x, y: m.pos.y, name: room.name};
-            }
-        }
-
-        info.exits = Game.map.describeExits(room.name);
-
-        return info;
+        return null;
     }
 
     /**
      * Gets a RoomPosition of a container directly adjacent to a source.
-     * First checks the room memory for a record, and if not present places the results of a successful search into room memory.
+     * First checks the room memory for a record, and if not present places the results of a successful search into
+     * room memory.
      *
      * @param sourceId the id of the Source around which to look
      * @returns {RoomPosition|undefined} the RoomPosition of the container, or undefined if one is not found
