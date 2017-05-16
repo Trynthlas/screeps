@@ -1,17 +1,17 @@
 'use strict';
 
-const defs = require('defs');
-const memory = require('memory');
-const roleHarvester = require('role.harvester');
-const rolePorter = require('role.porter');
-const roleUpgrader = require('role.upgrader');
-const roleBuilder = require('role.builder');
-const roleFighter = require('role.fighter');
+const defs            = require('defs'),
+      memory          = require('memory'),
+      roleHarvester   = require('role.harvester'),
+      rolePorter      = require('role.porter'),
+      roleUpgrader    = require('role.upgrader'),
+      roleBuilder     = require('role.builder'),
+      roleFighter     = require('role.fighter'),
 
-const Tower = require('Tower');
-const RoomManager = require('RoomManager');
+      Tower           = require('Tower'),
+      roomManagerPool = require('RoomManager'),
 
-const profiler = require('screeps-profiler');
+      profiler        = require('screeps-profiler');
 
 profiler.enable();
 
@@ -74,8 +74,8 @@ module.exports.loop = function() {
         }
 
         for( const name in Game.rooms ) {
-            let room = new RoomManager(Game.rooms[name]);
-            room.runRoom();
+            let manager = roomManagerPool.getManager(name);
+            manager.runRoom();
         }
     });
 };

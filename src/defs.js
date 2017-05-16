@@ -18,6 +18,12 @@ global.DIRECTIONS = {
     NORTHWEST: {x: -1, y: -1}
 };
 
+global.STD_MOVETO_OPTS = {
+    reusePath:    10,
+    ignoreCreeps: true,
+    maxOps:       200
+};
+
 module.exports = {
 
     ACTORS: {

@@ -234,7 +234,7 @@ class RoomManager {
                     return s.hits < s.hitsMax;
                 case STRUCTURE_WALL:
                 case STRUCTURE_RAMPART:
-                    return s.hits < defs.WALL_BUILD_FIX;
+                    return s.hits < WALL_BUILD_FIX;
                 default:
                     return s.hits < s.hitsMax / 2;
                 }
@@ -315,4 +315,19 @@ class RoomManager {
     }
 }
 
-module.exports = RoomManager;
+let rmPool = {
+    getManager: function(roomName) {
+        if( !this[roomName] ) {
+            try {
+                this[roomName] = new RoomManager(Game.rooms[roomName]);
+            } catch( e ) {
+                Game.notify(`Failed to create RoomManager for ${roomName}. Error: ${e}`, 5);
+                throw new ReferenceError(`${roomName} not found in Game.rooms`);
+            }
+
+            return this[roomName];
+        }
+    }
+};
+
+module.exports = rmPool;
