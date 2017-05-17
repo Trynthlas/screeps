@@ -4,14 +4,16 @@
 // Creep
 // -----------------------------------------------------------------------------------------------------
 
-Object.defineProperty(Creep.prototype, 'amount', {
-    get:          function() {
-        if( !this._amount ) {
-            this._amount = _.sum(this.carry);
-        }
-        return this._amount;
-    },
-    configurable: true
+Object.defineProperties(Creep.prototype, {
+    'amount': {
+        get:          function() {
+            if( !this._amount ) {
+                this._amount = _.sum(this.carry);
+            }
+            return this._amount;
+        },
+        configurable: true
+    }
 });
 
 /**
@@ -137,15 +139,15 @@ Object.defineProperties(Room.prototype, {
             if( !this._spawns ) {
                 if( !this.memory.spawns ) {
                     this.memory.spawns = this.find(FIND_MY_STRUCTURES,
-                                                   { filter: s => s.structureType === STRUCTURE_SPAWN }).map(s => s.id);
+                                                   { filter: s => s.structureType === STRUCTURE_SPAWN }).map(s => s.name);
                 }
-                this._spawns = this.memory.spawns.map(id => Game.getObjectById(id));
+                this._spawns = this.memory.spawns.map(name => Game.spawns[name]);
             }
             return this._spawns;
         },
         set:          function(spawns) {
             if( spawns ) {
-                this.memory.spawns = spawns.map(t => t.id);
+                this.memory.spawns = spawns.map(s => s.name);
                 this._spawns = spawns;
             } else {
                 this.memory.spawns.length = 0;

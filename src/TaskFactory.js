@@ -11,12 +11,12 @@ class TaskFactory {
 
     static createTask(memoryInfo, actor) {
         switch( memoryInfo.taskType ) {
-        case defs.TASKS.ATTACK:
+        case TASKS.ATTACK:
             if( actor instanceof StructureTower ) {
                 return new TowerAttackTask(memoryInfo.taskType, memoryInfo.targetId, memoryInfo.status, memoryInfo.prio);
             }
             break;
-        case defs.TASKS.REPAIR:
+        case TASKS.REPAIR:
             if( actor instanceof StructureTower ) {
                 return new TowerRepairTask(memoryInfo.taskType, memoryInfo.targetId, memoryInfo.status, memoryInfo.prio);
             } else if( actor instanceof Creep ) {

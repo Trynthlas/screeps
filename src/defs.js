@@ -8,14 +8,28 @@ global.WALL_BUILD_MAX = 400000;
 global.WALL_BUILD_FIX = 350000;
 
 global.DIRECTIONS = {
-    NORTH:     {x: 0, y: -1},
-    NORTHEAST: {x: -1, y: -1},
-    EAST:      {x: 1, y: 0},
-    SOUTHEAST: {x: 1, y: 1},
-    SOUTH:     {x: 0, y: 1},
-    SOUTHWEST: {x: -1, y: 1},
-    WEST:      {x: -1, y: 0},
-    NORTHWEST: {x: -1, y: -1}
+    NORTH:     { x: 0, y: -1 },
+    NORTHEAST: { x: -1, y: -1 },
+    EAST:      { x: 1, y: 0 },
+    SOUTHEAST: { x: 1, y: 1 },
+    SOUTH:     { x: 0, y: 1 },
+    SOUTHWEST: { x: -1, y: 1 },
+    WEST:      { x: -1, y: 0 },
+    NORTHWEST: { x: -1, y: -1 }
+};
+
+global.TASKS = {
+    ATTACK:  'attack',
+    HEAL:    'heal',
+    REPAIR:  'repair',
+};
+
+global.PRIORITY = {
+    IMMEDIATE: 1,
+    URGENT:    2,
+    HIGH:      3,
+    NORMAL:    4,
+    LOW:       5
 };
 
 global.STD_MOVETO_OPTS = {
@@ -30,13 +44,6 @@ module.exports = {
         CREEP: 'creep',
         TOWER: 'tower',
         SPAWN: 'spawn'
-    },
-
-    TASKS: {
-        ATTACK: 'attack',
-        HEAL:   'heal',
-        REPAIR: 'repair',
-        IDLE:   'idle'
     },
 
     HEAL_PART_THRESHOLD:   3,

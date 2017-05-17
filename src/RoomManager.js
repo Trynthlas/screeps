@@ -1,8 +1,9 @@
 'use strict';
 
-const defs  = require('defs'),
-      Task  = require('Task'),
-      Tower = require('Tower');
+const defs    = require('defs'),
+      helpers = require('helpers'),
+      Task    = require('Task'),
+      Tower   = require('Tower');
 
 /**
  * Memory.rooms[room]: {
@@ -11,15 +12,19 @@ const defs  = require('defs'),
  *      exits: {
  *          <TOP|RIGHT|BOTTOM|LEFT>: <roomName>
  *      },
+ *      towers: [<towerId>,...],
+ *      extensions: [<extensionId>,...],
+ *      spawns; [<spawnName>,...],
+ *
  *      sourceContainers: {
  *          <sourceId>: {
  *              container: <containerId>,
  *              pos: {RoomPosition}
  *          }
  *      },
- *      towers: [<towerId>,...],
- *      spawns; [<spawnName>,...],
  *      taskList: [<task>,...],
+ *      spawnQ: [<{creepRole, priority}>,...],
+ *      status: <RoomStatus>
  * }
  */
 
@@ -30,7 +35,7 @@ const RoomStatus = {
 };
 
 
-const EnergyStoragePriorityMap = new Map();
+let EnergyStoragePriorityMap = new Map();
 EnergyStoragePriorityMap.set(RoomStatus.ROOM_NORMAL, [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_STORAGE, STRUCTURE_TERMINAL]);
 EnergyStoragePriorityMap.set(RoomStatus.ROOM_HOSTILES, [STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_TOWER, STRUCTURE_STORAGE, STRUCTURE_TERMINAL]);
 EnergyStoragePriorityMap.set(RoomStatus.ROOM_PANIC, [STRUCTURE_TOWER, STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_STORAGE, STRUCTURE_TERMINAL]);
@@ -52,6 +57,9 @@ class RoomManager {
         }
         if( _.isUndefined(this.me.memory.taskList) ) {
             this.me.memory.taskList = [];
+        }
+        if( _.isUndefined(this.me.memory.spawnQ) ) {
+            this.me.memory.spawnQ = [];
         }
     }
 
@@ -113,6 +121,30 @@ class RoomManager {
         return OK;
     }
 
+    runSpawns() {
+        for(const spawn of this.me.spawns) {
+            if( !spawn.spawning && this.me.memory.spawnQ.length ) {
+
+            }
+        }
+    }
+
+    /**
+     * Adds a request for a creep to be spawned by the room
+     *
+     * @param creepDef {string|object}
+     * @param priority
+     */
+    addCreepToSpawnQ(creepDef, priority) {
+        let spawnObj = {
+            role: creepDef instanceof String ? creepDef : creepDef.role,
+            body: creepDef instanceof String ? undefined : creepDef.body,
+            prio: priority
+        };
+
+        helpers.insertToPriorityQueue(spawnObj, this.me.memory.spawnQ, 'prio');
+    }
+
     /**
      * Clears out completed tasks
      */
@@ -135,9 +167,7 @@ class RoomManager {
 
         this.findHostiles();
 
-        if( Game.time % ROOM_FIND_REPAIR_INTERVAL === 0 || !this.me.memory.taskList.find(t => {
-                return t.taskType === defs.TASKS.REPAIR;
-            }) ) {
+        if( Game.time % ROOM_FIND_REPAIR_INTERVAL === 0 ) {
             this.findRepairTasks();
         }
 
@@ -182,10 +212,10 @@ class RoomManager {
             console.log('Other enemy creeps:', enemies[1].length);
 
             enemies[0].forEach(enemy => {
-                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.IMMEDIATE));
+                this.addToTaskList(Task.toMemoryObject(TASKS.ATTACK, enemy.id, Task.STATUS.TODO, PRIORITY.IMMEDIATE));
             });
             enemies[1].forEach(enemy => {
-                this.addToTaskList(Task.toMemoryObject(defs.TASKS.ATTACK, enemy.id, Task.STATUS.TODO, Task.PRIORITY.URGENT));
+                this.addToTaskList(Task.toMemoryObject(TASKS.ATTACK, enemy.id, Task.STATUS.TODO, PRIORITY.URGENT));
             });
         }
     }
@@ -223,18 +253,18 @@ class RoomManager {
             switch( target.structureType ) {
             case STRUCTURE_SPAWN:
             case STRUCTURE_EXTENSION:
-                prio = Task.PRIORITY.URGENT;
+                prio = PRIORITY.URGENT;
                 break;
             case STRUCTURE_WALL:
             case STRUCTURE_RAMPART:
-                prio = Task.PRIORITY.HIGH;
+                prio = PRIORITY.HIGH;
                 break;
             default:
-                prio = Task.PRIORITY.LOW;
+                prio = PRIORITY.LOW;
                 break;
             }
 
-            let newTask = Task.toMemoryObject(defs.TASKS.REPAIR, target.id, Task.STATUS.TODO, prio);
+            let newTask = Task.toMemoryObject(TASKS.REPAIR, target.id, Task.STATUS.TODO, prio);
             console.log('For target', target.structureType, ', adding new Task to memory:', JSON.stringify(newTask));
             this.addToTaskList(newTask);
         });
@@ -305,6 +335,10 @@ class RoomManager {
 
 let rmPool = {
     getManager: function(roomName) {
+        if( !roomName ) {
+            throw new ReferenceError(`Can't get RoomManager for empty room name`);
+        }
+
         if( !this[roomName] ) {
             try {
                 this[roomName] = new RoomManager(Game.rooms[roomName]);
@@ -312,9 +346,9 @@ let rmPool = {
                 Game.notify(`Failed to create RoomManager for ${roomName}. Error: ${e}`, 5);
                 throw new ReferenceError(`${roomName} not found in Game.rooms`);
             }
-
-            return this[roomName];
         }
+
+        return this[roomName];
     }
 };
 

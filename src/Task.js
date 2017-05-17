@@ -32,16 +32,6 @@ class Task {
         return Object.freeze({TODO: 0, DONE: 1});
     }
 
-    static get PRIORITY() {
-        return Object.freeze({
-            IMMEDIATE: 1,
-            URGENT:    2,
-            HIGH:      3,
-            NORMAL:    4,
-            LOW:       5
-        });
-    }
-
     execute(actor) {
         throw new TypeError('Must implement method');
     }

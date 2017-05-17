@@ -2,8 +2,8 @@
 
 const defs        = require('defs'),
       Task        = require('Task'),
-      TaskFactory = require('TaskFactory');
-//profiler    = require('./screeps-profiler')
+      TaskFactory = require('TaskFactory'),
+      profiler    = require('./screeps-profiler');
 
 
 const ATTACK_POWER = [600, 600, 600, 600, 600, 570, 540, 510, 480, 450, 420, 390, 360, 330, 300, 270, 240, 210, 180, 150];
@@ -76,9 +76,9 @@ class Tower {
     updateTasksFromRoom() {
         let roomTasks = this.me.room.memory.taskList.filter(task => {
             let target = Game.getObjectById(task.targetId);
-            return (task.taskType === defs.TASKS.ATTACK && target instanceof Creep) ||
-                   (task.taskType === defs.TASKS.REPAIR && target.structureType !== STRUCTURE_WALL) &&
-                   !_.some(this.tasks, task);
+            return (task.taskType === TASKS.ATTACK && target instanceof Creep) ||
+                (task.taskType === TASKS.HEAL && target instanceof Creep) ||
+                (task.taskType === TASKS.REPAIR && target.structureType !== STRUCTURE_WALL) && !_.some(this.tasks, task);
         });
 
         if( roomTasks.length ) {
@@ -100,44 +100,44 @@ class Tower {
         console.log('Tower: selecting tasks based on prio', topPrio, 'with', choices.length, 'choices');
 
         // For equal priority tasks, further prioritize by task type and target importance
-        if( _.some(choices, (c) => c.taskType === defs.TASKS.ATTACK) ) {
+        if( _.some(choices, (c) => c.taskType === TASKS.ATTACK) ) {
             //console.log('Tower: trying to select attacks');
-            _.forEach(_.filter(choices, (c) => c.taskType === defs.TASKS.ATTACK), (t) => {
+            _.forEach(_.filter(choices, (c) => c.taskType === TASKS.ATTACK), (t) => {
                 let targetRating = this._calculateAttackTargetRating(t.targetId);
                 if( !bestTarget || targetRating > bestTarget.rating ) {
-                    bestTarget = {target: t.targetId, rating: targetRating};
+                    bestTarget = { target: t.targetId, rating: targetRating };
                     console.log('Tower: got best ATTACK target as', JSON.stringify(bestTarget));
                 }
             });
         }
 
-        if( _.some(choices, (c) => c.taskType === defs.TASKS.HEAL) ) {
+        if( _.some(choices, (c) => c.taskType === TASKS.HEAL) ) {
             //console.log('Tower: trying to select heals');
-            _.forEach(_.filter(choices, (c) => c.taskType === defs.TASKS.HEAL), (t) => {
+            _.forEach(_.filter(choices, (c) => c.taskType === TASKS.HEAL), (t) => {
                 let rating = Tower.getPowerForDistance(HEAL_POWER, this.me.pos.getRangeTo(t)) * 0.25;
                 if( !bestTarget || rating > bestTarget.rating ) {
-                    bestTarget = {target: t.targetId, rating: rating};
+                    bestTarget = { target: t.targetId, rating: rating };
                     //console.log('Tower: got best HEAL target as',JSON.stringify(bestTarget));
                 }
             });
         }
 
-        if( !bestTarget && _.some(choices, (c) => c.taskType === defs.TASKS.REPAIR) ) {
+        if( !bestTarget && _.some(choices, (c) => c.taskType === TASKS.REPAIR) ) {
             //console.log('Tower: trying to select repairs');
             let repairs = [];
-            _.forEach(_.filter(choices, (c) => c.taskType === defs.TASKS.REPAIR), (t) => {
+            _.forEach(_.filter(choices, (c) => c.taskType === TASKS.REPAIR), (t) => {
                 repairs.push(Game.getObjectById(t.targetId));
             });
 
-            bestTarget = {target: this.me.pos.findClosestByRange(repairs).id};
+            bestTarget = { target: this.me.pos.findClosestByRange(repairs).id };
             //console.log('Tower: got best REPAIR target as',JSON.stringify(bestTarget));
 
         }
 
         console.log('Tower selecting best target as', JSON.stringify(bestTarget));
         return bestTarget ? _.find(this.tasks, (t) => {
-            return t.targetId === bestTarget.target && t.prio === topPrio;
-        }) : null;
+                return t.targetId === bestTarget.target && t.prio === topPrio;
+            }) : null;
     }
 
     _calculateAttackTargetRating(targetId) {
@@ -180,6 +180,6 @@ class Tower {
     }
 }
 
-//profiler.registerClass(Tower, 'Tower');
+profiler.registerClass(Tower, 'Tower');
 
 module.exports = Tower;
