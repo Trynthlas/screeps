@@ -24,6 +24,19 @@ global.TASKS = {
     REPAIR:  'repair',
 };
 
+global.ROLES = {
+    FLEX_WORKER:      'flex worker',
+    HARVESTER_MOBILE: 'mobile harvester',
+    HARVESTER_STATIC: 'static harvester',
+    HAULER:           'hauler',
+    UPGRADER:         'upgrader',
+    FIGHTER:          'fighter',
+    RANGER:           'ranger',
+    HEALER:           'healer',
+    FLEX_COMBAT:      'flex fighter',
+    SCOUT:            'scout'
+};
+
 global.PRIORITY = {
     IMMEDIATE: 1,
     URGENT:    2,

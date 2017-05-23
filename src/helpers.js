@@ -29,5 +29,30 @@ module.exports = {
             }
             return 0;
         });
+    },
+
+    /**
+     * Run-length decode an array
+     *
+     * @author warinternal
+     * @param {Array} [arr]
+     * @return {Array}
+     */
+    RLD: function(arr) {
+        if( !arr || !arr.length ) {
+            throw new Error('RLD expects non-empty array');
+        }
+        let r = [];
+        for( let i = 0; i < arr.length; i += 2 ) {
+            let c = arr[i];
+            let v = arr[i + 1];
+            while( c > 0 ) {
+                r.push(v);
+                --c;
+            }
+        }
+        return r;
     }
+
+
 };
